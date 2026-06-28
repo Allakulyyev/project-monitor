@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+
+# Packaged extension
+*.vsix
+
+# Editor / personal settings
+.vscode/
+.vscode-test/
+
+# Claude Code (local sessions, settings, etc.)
+.claude/
+
+# Misc / OS junk
+.groupedtimelineinclude
+.DS_Store
+Thumbs.db
+*.log

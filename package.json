@@ -1,0 +1,76 @@
+{
+  "name": "project-monitor",
+  "displayName": "Project Monitor",
+  "description": "Shows open VS Code windows, the active window, and the AI status in each window.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "projectMonitor",
+          "title": "Project Monitor",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "projectMonitor": [
+        {
+          "id": "projectMonitor.windows",
+          "name": "Open Windows",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "projectMonitor.toggle",
+        "title": "Project Monitor: Toggle Panel"
+      },
+      {
+        "command": "projectMonitor.openWindow",
+        "title": "Project Monitor: Open Project"
+      },
+      {
+        "command": "projectMonitor.refresh",
+        "title": "Project Monitor: Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "projectMonitor.refresh",
+          "when": "view == projectMonitor.windows",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "vsce package --allow-missing-repository",
+    "vscode:prepublish": "node esbuild.js --production"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
+  }
+}
