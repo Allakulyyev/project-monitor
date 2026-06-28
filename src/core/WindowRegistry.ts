@@ -49,4 +49,9 @@ export class WindowRegistry {
   get id(): string {
     return this.selfId;
   }
+
+  // The current window's live AI state (no file lag) — used by the UI for accurate counts.
+  get selfAi(): WindowInfo['ai'] | undefined {
+    return this.current?.ai;
+  }
 }

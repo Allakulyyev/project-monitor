@@ -62,10 +62,14 @@ export class WindowsViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const windows = await this.registry.getWindows();
-    // For our own window, take the live focus straight from VS Code — the file may lag.
+    // For our own window, take the live focus and AI status from memory — the file may lag.
     for (const w of windows) {
       if (w.id === this.registry.id) {
         w.focused = vscode.window.state.focused;
+        const ai = this.registry.selfAi;
+        if (ai) {
+          w.ai = ai;
+        }
       }
     }
     const payload = windows
@@ -86,8 +90,11 @@ export class WindowsViewProvider implements vscode.WebviewViewProvider {
       }));
     void view.webview.postMessage({ type: 'update', windows: payload });
 
-    // Badge on the container icon — number of windows where the AI is working now (hidden at 0).
-    const working = windows.filter((w) => w.ai.status === 'thinking').length;
+    // Badge on the container icon — number of OTHER windows where the AI is working now
+    // (the current window is excluded: you already see its state). Hidden at 0.
+    const working = windows.filter(
+      (w) => w.id !== this.registry.id && w.ai.status === 'thinking'
+    ).length;
     view.badge = working > 0 ? { value: working, tooltip: `${working} working` } : undefined;
   }
 }

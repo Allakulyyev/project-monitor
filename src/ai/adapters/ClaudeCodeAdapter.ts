@@ -11,10 +11,13 @@ const POLL_MS = 1000;
 const IDLE_MS = 5 * 60 * 1000;
 // How many bytes from the end of the file we read to find the last message.
 const TAIL_BYTES = 256 * 1024;
-// If the content can't be parsed but the file changed within this window, treat as working.
-const RECENT_MS = 8000;
-// How often to re-scan for the sessions folder while it hasn't been found yet (ms).
-const RESCAN_MS = 10000;
+// An unfinished session counts as "working" only if its file was written within this
+// window — an actively working Claude keeps appending to its session file. A middle
+// ground: long enough to survive normal pauses, short enough that a one-off write
+// (e.g. a compact summary) doesn't keep the status stuck on "working".
+const WORKING_GRACE = 30000;
+// How often to run the (expensive) full folder scan while the folder hasn't been found (ms).
+const RESCAN_MS = 3000;
 
 // A single Claude Code transcript line (we only care about type, cwd and stop reason).
 interface TranscriptLine {
@@ -102,42 +105,48 @@ export class ClaudeCodeAdapter implements AiStatusProvider {
       this.lastContentStatus = this.statusFromObjs(this.readTail(newest.file));
     }
 
-    const status = this.lastContentStatus;
-    // If the tail had no readable message (e.g. very large records), fall back to recency.
-    if (status === null) {
-      return age < RECENT_MS ? 'thinking' : 'done';
+    // Claude finished its turn (end_turn) — show "finished", not "working".
+    if (this.lastContentStatus === 'done') {
+      return 'done';
     }
-    return status;
+    // Unfinished (tool_use / user) or unreadable: it's "working" only while the file is
+    // actively being written. If it has been silent for a while, Claude isn't working —
+    // this keeps the "working" count from getting stuck above zero.
+    return age < WORKING_GRACE ? 'thinking' : 'idle';
   }
 
-  // Returns the project's sessions folder (cached; rare full scan when not found).
+  // Returns the project's sessions folder. The cheap encoded-name path is checked every
+  // poll (so a freshly started session is found within ~1s); the full disk scan is throttled.
   private resolveDir(): string | null {
     if (this.cachedDir && fs.existsSync(this.cachedDir)) {
       return this.cachedDir;
     }
-    const now = Date.now();
-    // If the folder hasn't been found yet — don't scan the disk more often than RESCAN_MS.
-    if (this.cachedDir === null && now - this.lastScan < RESCAN_MS) {
-      return null;
-    }
-    this.lastScan = now;
-    this.cachedDir = this.findDir();
-    return this.cachedDir;
-  }
+    this.cachedDir = null;
 
-  // Finds the folder whose freshest session has a cwd matching this window's folder.
-  private findDir(): string | null {
-    if (!this.target) {
-      return null;
-    }
-    // Fast path: the encoded folder name.
+    // Fast path, checked every poll: the encoded folder name (a single folder lookup).
     if (this.encoded) {
       const direct = path.join(this.base, this.encoded);
       if (this.dirMatches(direct)) {
+        this.cachedDir = direct;
         return direct;
       }
     }
-    // Reliable path: scan all folders and check the cwd of the freshest session.
+
+    // Expensive full scan over every folder: throttled so we don't scan the disk each second.
+    const now = Date.now();
+    if (now - this.lastScan < RESCAN_MS) {
+      return null;
+    }
+    this.lastScan = now;
+    this.cachedDir = this.scanForDir();
+    return this.cachedDir;
+  }
+
+  // Full scan over all project folders, matching by cwd (the encoded fast path was already tried).
+  private scanForDir(): string | null {
+    if (!this.target) {
+      return null;
+    }
     try {
       for (const name of fs.readdirSync(this.base)) {
         const dir = path.join(this.base, name);

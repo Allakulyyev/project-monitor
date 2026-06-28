@@ -185,9 +185,10 @@ export function getWebviewHtml(nonce: string): string {
     const list = windows || [];
     empty.style.display = list.length ? 'none' : 'block';
 
-    // Update the header counters: total open and how many are working.
+    // Update the header counters: total open and how many OTHER windows are working
+    // (the current window is excluded — you already see its status on its card).
     summary.style.display = list.length ? 'flex' : 'none';
-    const working = list.filter((w) => w.aiStatus === 'thinking').length;
+    const working = list.filter((w) => !w.self && w.aiStatus === 'thinking').length;
     if (totalN.textContent !== String(list.length)) {
       totalN.textContent = list.length;
     }
