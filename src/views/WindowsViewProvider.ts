@@ -90,11 +90,7 @@ export class WindowsViewProvider implements vscode.WebviewViewProvider {
       }));
     void view.webview.postMessage({ type: 'update', windows: payload });
 
-    // Badge on the container icon — number of OTHER windows where the AI is working now
-    // (the current window is excluded: you already see its state). Hidden at 0.
-    const working = windows.filter(
-      (w) => w.id !== this.registry.id && w.ai.status === 'thinking'
-    ).length;
-    view.badge = working > 0 ? { value: working, tooltip: `${working} working` } : undefined;
+    // No numeric badge on the container icon — keep it cleared.
+    view.badge = undefined;
   }
 }

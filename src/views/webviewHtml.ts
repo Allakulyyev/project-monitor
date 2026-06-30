@@ -55,32 +55,15 @@ export function getWebviewHtml(nonce: string): string {
   .s-done { background: var(--vscode-charts-green, #3fb950); }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
   #empty { color: var(--vscode-descriptionForeground); padding: 8px 4px; }
-  /* Header counters: total open projects and how many are working right now. */
-  #summary { display: flex; gap: 6px; margin-bottom: 8px; }
-  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
-          padding: 2px 8px; border-radius: 10px;
-          background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-  .pill .dot { width: 7px; height: 7px; border-radius: 50%; }
-  .pill.total .dot { background: var(--vscode-descriptionForeground); }
-  .pill.working .dot { background: var(--vscode-charts-green, #3fb950); }
-  .pill.working.off { opacity: 0.5; }
 </style>
 </head>
 <body>
   <div id="empty">No open windows yet.</div>
-  <div id="summary">
-    <span class="pill total"><span class="dot"></span><span id="totalN">0</span> open</span>
-    <span class="pill working off"><span class="dot"></span><span id="workingN">0</span> working</span>
-  </div>
   <div id="cards"></div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('cards');
   const empty = document.getElementById('empty');
-  const summary = document.getElementById('summary');
-  const totalN = document.getElementById('totalN');
-  const workingN = document.getElementById('workingN');
-  const workingPill = document.querySelector('.pill.working');
   // Already-created cards keyed by window id — so we update them instead of recreating.
   const cards = new Map();
 
@@ -184,18 +167,6 @@ export function getWebviewHtml(nonce: string): string {
   function render(windows) {
     const list = windows || [];
     empty.style.display = list.length ? 'none' : 'block';
-
-    // Update the header counters: total open and how many OTHER windows are working
-    // (the current window is excluded — you already see its status on its card).
-    summary.style.display = list.length ? 'flex' : 'none';
-    const working = list.filter((w) => !w.self && w.aiStatus === 'thinking').length;
-    if (totalN.textContent !== String(list.length)) {
-      totalN.textContent = list.length;
-    }
-    if (workingN.textContent !== String(working)) {
-      workingN.textContent = working;
-    }
-    workingPill.classList.toggle('off', working === 0);
 
     const seen = new Set();
     list.forEach((w, index) => {
